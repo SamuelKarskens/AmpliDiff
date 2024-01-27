@@ -118,7 +118,10 @@ def process_sequences(sequences, min_non_align=0, amplicon_width=0, max_misalign
             raise ValueError("Sequences have varying lengths, only multiple aligned sequences can be preprocessed!")
 
 
-    def find_feasible_amplicons(sequence, lb, ub, amplicon_width, max_misalign):
+    '''
+    Changes to incorporate search_window and segment_breaks done by Kevin den Boon
+    '''
+    def find_feasible_amplicons(sequence, lb, ub, amplicon_width, max_misalign, search_window):
         '''
         Function that determines feasible amplicons based on the number of misalignment characters.
 
@@ -143,17 +146,27 @@ def process_sequences(sequences, min_non_align=0, amplicon_width=0, max_misalign
         '''
         feasible_amplicons = set()
         misalign_indices = []
+        segment_break = 0
 
         #Determine indices of misalignment characters in initial amplicon minus the final position
         for i in range(lb, lb+amplicon_width-1):
             if sequence.sequence[i] == '-':
                 misalign_indices.append(i)
+        # Determine whether a segment break is within the area of the amplicon + or - the search window
+        for i in range(0, lb+amplicon_width-1+search_window):
+            if sequence.sequence[i] == '8':
+                segment_break = i
         #Iterate over amplicons between lb and ub
         for i in range(lb+amplicon_width-1, ub):
-            if sequence.sequence[i] == '-': # check if next character is misalign character
+            if sequence.sequence[i] == '-':  # check if next character is misalign character
                 misalign_indices.append(i)
-            if len(misalign_indices) <= max_misalign: # check if current amplicon has too many misalign characters
+            if sequence.sequence[i + search_window] == '8':  # check if next character in search_window is segment break character
+                segment_break = i
+            if len(misalign_indices) <= max_misalign and segment_break == 0:  # check if current amplicon has too many misalign characters or has segment break characters
                 feasible_amplicons.add((i-amplicon_width+1, i+1))
+            if not segment_break == 0:  # if current segment_break exists, check if it is leaving the range of amplicon - search_window and if so remove it
+                if segment_break == i - search_window - amplicon_width + 1:
+                    segment_break = 0
             try: # check if the first index in misalign_indices should be removed
                 if misalign_indices[0] == i - amplicon_width + 1:
                     misalign_indices.pop(0)
@@ -186,9 +199,9 @@ def process_sequences(sequences, min_non_align=0, amplicon_width=0, max_misalign
         #If amplicon width and misalign_threshold are specified, find feasible amplicons
         if amplicon_width > 0 and max_misalign >= 0:
             if sequence_index == 0:
-                feasible_amplicons = find_feasible_amplicons(sequence, lb, ub, amplicon_width, max_misalign)
+                feasible_amplicons = find_feasible_amplicons(sequence, lb, ub, amplicon_width, max_misalign, min_non_align)
             else:
-                feasible_amplicons = feasible_amplicons.intersection(find_feasible_amplicons(sequence, lb, ub, amplicon_width, max_misalign))
+                feasible_amplicons = feasible_amplicons.intersection(find_feasible_amplicons(sequence, lb, ub, amplicon_width, max_misalign, min_non_align))
         sequence_index += 1
 
     #Generate array with ones for positions that should be considered
@@ -229,7 +242,7 @@ def translate_to_numeric(sequences, amplicons, relevant_nucleotides, comparison_
         Numpy array where every entry contains 
         (starting_index, first relevant nucleotide before amplicon, first relevant nucleotide after amplicon).
     '''
-    chars = ['a','c','t','g','u','r','y','k','m','s','w','b','d','h','v','n','-']
+    chars = ['a','c','t','g','u','r','y','k','m','s','w','b','d','h','v','n','-', '8']
     char_comp = np.zeros((len(chars), len(chars)), dtype=np.int8)
     chars2num = {}
     seqs_num = np.zeros((len(sequences), sequences[0].length), dtype=np.int8)

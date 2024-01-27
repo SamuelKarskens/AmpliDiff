@@ -1,4 +1,5 @@
-from classless_methods import reverse_complement, calculate_degeneracy, calculate_GC, calculate_end_stats, calculate_longest_monorun, calculate_longest_duorun
+from classless_methods import reverse_complement, calculate_degeneracy, calculate_GC, calculate_end_stats, \
+    calculate_longest_monorun, calculate_longest_duorun, calculate_degeneracyAndSegmentBreak
 from Bio.SeqUtils import MeltingTemp as mt
 import RNA
 
@@ -145,7 +146,9 @@ class Primer:
         '''
         if verbose:
             problems = []
-            self.degeneracy = calculate_degeneracy(self.sequence)
+            self.degeneracy, containsSplit = calculate_degeneracyAndSegmentBreak(self.sequence)
+            if containsSplit:
+                problems.append("Primer overlaps genes")
             if self.degeneracy > 1:
                 problems.append('Primer is too degenerate')
             self.gc = calculate_GC(self.sequence)
@@ -182,7 +185,11 @@ class Primer:
             for p in problems: print(p)
             return len(problems) == 0
         else:
-            if calculate_degeneracy(self.sequence) > 1:
+            degeneracy, containsSplit = calculate_degeneracyAndSegmentBreak(self.sequence)
+            if containsSplit:
+                self.feasible = False
+                return False
+            if degeneracy > 1:
                 self.feasible = False
                 return False
             cur_crit = calculate_GC(self.sequence)
