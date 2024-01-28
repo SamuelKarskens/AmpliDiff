@@ -1,0 +1,11 @@
+Parameters used.
+Top-5
+-ss MSv3 -amp -l 250 -p -rs 5 -f 1000
+Top-10
+-ss MSv3 -amp -l 250 -p -rs 10 -f 1000
+Top-15
+-ss MSv3 -amp -l 250 -p -rs 15 -f 1000
+AmpliDiff
+-ss MSv3 -amp -l 250 -p -rs 8 -f 1000
+WGS
+-ss MSv3 -l 250 -rs 20 -f 100 -m 400 -s 10

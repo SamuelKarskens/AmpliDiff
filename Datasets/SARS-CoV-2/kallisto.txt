@@ -1,0 +1,2 @@
+For the top5,top10,top15,amplidiff,wgs:
+kallisto quant -t 20 -s 4 -t 20 -s -l
